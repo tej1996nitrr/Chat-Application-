@@ -28459,24 +28459,22 @@ var WebSocketService = /*#__PURE__*/function () {
   }
 
   _createClass(WebSocketService, [{
-    key: "state",
-    value: function state() {
-      return this.socketRef.readyState;
-    }
-  }, {
     key: "connect",
     value: function connect() {
       var _this = this;
 
-      var path = 'ws://127.0.0.1:8000/ws/chat/test';
+      var path = 'ws://127.0.0.1:8000/ws/chat/test/';
       this.socketRef = new WebSocket(path);
 
       this.socketRef.onopen = function () {
-        console.log('Websocket open');
+        console.log('WebSocket open');
       };
 
+      this.socketNewMessage(JSON.stringify({
+        command: 'fetch_messages'
+      }));
+
       this.socketRef.onmessage = function (e) {
-        //sending message
         _this.socketNewMessage(e.data);
       };
 
@@ -28485,7 +28483,7 @@ var WebSocketService = /*#__PURE__*/function () {
       };
 
       this.socketRef.onclose = function () {
-        console.log('Websocket closed');
+        console.log("WebSocket closed let's reopen");
 
         _this.connect();
       };
@@ -28494,23 +28492,23 @@ var WebSocketService = /*#__PURE__*/function () {
     key: "socketNewMessage",
     value: function socketNewMessage(data) {
       var parsedData = JSON.parse(data);
-      var command = parsedData.command; //commans can be fetch message or get message
+      var command = parsedData.command;
 
       if (Object.keys(this.callbacks).length === 0) {
         return;
       }
 
-      if (command == 'messages') {
+      if (command === 'messages') {
         this.callbacks[command](parsedData.messages);
       }
 
-      if (command == 'new_message') {
+      if (command === 'new_message') {
         this.callbacks[command](parsedData.message);
       }
     }
   }, {
-    key: "fetchMessage",
-    value: function fetchMessage(username) {
+    key: "fetchMessages",
+    value: function fetchMessages(username) {
       this.sendMessage({
         command: 'fetch_messages',
         username: username
@@ -28522,7 +28520,7 @@ var WebSocketService = /*#__PURE__*/function () {
       this.sendMessage({
         command: 'new_message',
         from: message.from,
-        message: message.connect
+        message: message.content
       });
     }
   }, {
@@ -28537,28 +28535,13 @@ var WebSocketService = /*#__PURE__*/function () {
       try {
         this.socketRef.send(JSON.stringify(_objectSpread({}, data)));
       } catch (err) {
-        console.log(err);
+        console.log(err.message);
       }
     }
   }, {
-    key: "waitForSocketConnection",
-    value: function waitForSocketConnection(callback) {
-      var socket = this.socketRef;
-      var recursion = this.waitForSocketConnection;
-      setTimeout(function () {
-        if (socket.readyState === 1) {
-          console.log("connection is secure");
-
-          if (callback != null) {
-            callback();
-          }
-
-          return;
-        } else {
-          console.log("waiting for connection...");
-          recursion(callback);
-        }
-      }, 1);
+    key: "state",
+    value: function state() {
+      return this.socketRef.readyState;
     }
   }]);
 
@@ -28624,17 +28607,35 @@ var Chat = /*#__PURE__*/function (_React$Component) {
 
     _this = _possibleConstructorReturn(this, _getPrototypeOf(Chat).call(this, props));
 
+    _defineProperty(_assertThisInitialized(_this), "messageChangeHandler", function (event) {
+      _this.setState({
+        message: event.target.value
+      });
+    });
+
+    _defineProperty(_assertThisInitialized(_this), "sendMessageHandler", function (e) {
+      e.preventDefault();
+      var messageObject = {
+        from: "user1",
+        content: _this.state.message
+      };
+
+      _websocket.default.newChatMessage(messageObject);
+
+      _this.setState({
+        message: ''
+      });
+    });
+
     _defineProperty(_assertThisInitialized(_this), "renderMessages", function (messages) {
-      var currentUser = 'user1';
-      return messages.map(function (message) {
+      var currentUser = "user1";
+      return messages.map(function (message, i) {
         return _react.default.createElement("li", {
           key: message.id,
           className: message.author === currentUser ? 'sent' : 'replies'
         }, _react.default.createElement("img", {
-          scr: "http://emilcarlsson.se/assets/mikeross.png"
-        }), _react.default.createElement("p", null, message.content, _react.default.createElement("br", null), _react.default.createElement("small", {
-          className: message.author === currentUser ? 'sent' : 'replies'
-        }, Math.round((new Date().getTime() - new Date(message.timestamp).getTime()) / 60000), " minutes ago")));
+          src: "http://emilcarlsson.se/assets/mikeross.png"
+        }), _react.default.createElement("p", null, message.content, _react.default.createElement("br", null)));
       });
     });
 
@@ -28650,11 +28651,19 @@ var Chat = /*#__PURE__*/function (_React$Component) {
   }
 
   _createClass(Chat, [{
-    key: "setMessages",
-    value: function setMessages(messages) {
-      this.setState({
-        messages: messages.reverse()
-      });
+    key: "waitForSocketConnection",
+    value: function waitForSocketConnection(callback) {
+      var component = this;
+      setTimeout(function () {
+        if (_websocket.default.state() === 1) {
+          console.log("Connection is made");
+          callback();
+          return;
+        } else {
+          console.log("wait for connection...");
+          component.waitForSocketConnection(callback);
+        }
+      }, 100);
     }
   }, {
     key: "addMessage",
@@ -28664,20 +28673,11 @@ var Chat = /*#__PURE__*/function (_React$Component) {
       });
     }
   }, {
-    key: "waitForSocketConnection",
-    value: function waitForSocketConnection(callback) {
-      var component = this; // const recursion = this.waitForSocketConnection
-
-      setTimeout(function () {
-        if (_websocket.default.state() === 1) {
-          console.log("connection is secure");
-          callback();
-          return;
-        } else {
-          console.log("waiting for connection...");
-          component.waitForSocketConnection(callback);
-        }
-      }, 100);
+    key: "setMessages",
+    value: function setMessages(messages) {
+      this.setState({
+        messages: messages.reverse()
+      });
     }
   }, {
     key: "render",
@@ -28709,9 +28709,14 @@ var Chat = /*#__PURE__*/function (_React$Component) {
         id: "chat-log"
       }, messages && this.renderMessages(messages))), _react.default.createElement("div", {
         className: "message-input"
+      }, _react.default.createElement("form", {
+        onSubmit: this.sendMessageHandler
       }, _react.default.createElement("div", {
         className: "wrap"
       }, _react.default.createElement("input", {
+        onChange: this.messageChangeHandler,
+        value: this.state.message,
+        required: true,
         id: "chat-message-input",
         type: "text",
         placeholder: "Write your message..."
@@ -28724,7 +28729,7 @@ var Chat = /*#__PURE__*/function (_React$Component) {
       }, _react.default.createElement("i", {
         className: "fa fa-paper-plane",
         "aria-hidden": "true"
-      }))))));
+      })))))));
     }
   }]);
 
@@ -28741,6 +28746,8 @@ var _react = _interopRequireDefault(require("react"));
 var _reactDom = _interopRequireDefault(require("react-dom"));
 
 var _Chat = _interopRequireDefault(require("./containers/Chat"));
+
+var _websocket = _interopRequireDefault(require("./websocket"));
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -28772,6 +28779,11 @@ var App = /*#__PURE__*/function (_React$Component) {
   }
 
   _createClass(App, [{
+    key: "componentDidMount",
+    value: function componentDidMount() {
+      _websocket.default.connect();
+    }
+  }, {
     key: "render",
     value: function render() {
       return _react.default.createElement(_Chat.default, null);
@@ -28782,7 +28794,7 @@ var App = /*#__PURE__*/function (_React$Component) {
 }(_react.default.Component);
 
 _reactDom.default.render(_react.default.createElement(App, null), document.getElementById('app'));
-},{"react":"node_modules/react/index.js","react-dom":"node_modules/react-dom/index.js","./containers/Chat":"src/containers/Chat.js"}],"../../../Node/node_modules/parcel-bundler/src/builtins/hmr-runtime.js":[function(require,module,exports) {
+},{"react":"node_modules/react/index.js","react-dom":"node_modules/react-dom/index.js","./containers/Chat":"src/containers/Chat.js","./websocket":"src/websocket.js"}],"../../../Node/node_modules/parcel-bundler/src/builtins/hmr-runtime.js":[function(require,module,exports) {
 var global = arguments[3];
 var OVERLAY_ID = '__parcel__error__overlay__';
 var OldModule = module.bundle.Module;
