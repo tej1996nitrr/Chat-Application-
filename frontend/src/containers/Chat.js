@@ -98,4 +98,4 @@ class Chat extends React.Component
         )
     }
 }
-export default Cha
+export default Chat;

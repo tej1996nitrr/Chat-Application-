@@ -28707,7 +28707,7 @@ var Chat = /*#__PURE__*/function (_React$Component) {
         className: "messages"
       }, _react.default.createElement("ul", {
         id: "chat-log"
-      }, "messages && this.renderMessages(messages)")), _react.default.createElement("div", {
+      }, messages && this.renderMessages(messages))), _react.default.createElement("div", {
         className: "message-input"
       }, _react.default.createElement("div", {
         className: "wrap"
