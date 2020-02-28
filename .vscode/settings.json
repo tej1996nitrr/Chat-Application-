@@ -1,3 +1,4 @@
 {
-    "python.pythonPath": "F:\\Ana\\envs\\DjangoEnv\\python.exe"
+    "python.pythonPath": "C:\\Ana\\python.exe",
+    "python.linting.enabled": false
 }
