@@ -9,6 +9,8 @@ class WebSocketService {
       return WebSocketService.instance;
     }
   
+//changes
+
     constructor() {
       this.socketRef = null;
     }
